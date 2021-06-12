@@ -33,7 +33,7 @@ Akamai
 
 
 
-.. |Style badge| image:: https://img.shields.io/badge/code%20style-black-000000.svg
+.. |Style badge| image:: https://img.shields.io/badge/code%20style-black-000000
    :target: https://github.com/python/black
-.. |License badge| image:: https://img.shields.io/github/license/vladvasiliu/ss2sg.svg
+.. |License badge| image:: https://img.shields.io/github/license/vladvasiliu/ss2sg
    :target: LICENSE
