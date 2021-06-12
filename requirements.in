@@ -1,0 +1,7 @@
+# AWS SDK for Python
+boto3
+# Akamai {OPEN} Edgegrid Authentication
+edgegrid-python
+
+pydantic
+requests
