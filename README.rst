@@ -2,15 +2,13 @@
 SS2SG
 #####
 
-|Style badge| |License badge|
+|Status badge| |Style badge| |License badge|
 
 ***************************
 SiteShield to SecurityGroup
 ***************************
 
-`ss2sg` is a small script that updates the rules of an AWS Security Group to match the IPs of an Akamai SiteShield.
-
-This project has only just started so it doesn't do anything useful yet. It can only list the Akamai Security Groups.
+``ss2sg`` is a small script that updates the rules of an AWS Security Group to match the IPs of an Akamai SiteShield Map.
 
 =======
 License
@@ -37,3 +35,4 @@ Akamai
    :target: https://github.com/python/black
 .. |License badge| image:: https://img.shields.io/github/license/vladvasiliu/ss2sg
    :target: LICENSE
+.. |Status badge| image:: https://img.shields.io/badge/status-pre--alpha-red
