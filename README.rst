@@ -10,11 +10,13 @@ SiteShield to SecurityGroup
 
 `ss2sg` is a small script that updates the rules of an AWS Security Group to match the IPs of an Akamai SiteShield.
 
-======
-Status
-======
-
 This project has only just started so it doesn't do anything useful yet. It can only list the Akamai Security Groups.
+
+=======
+License
+=======
+
+This program is distributed under the terms of the `3-Clause BSD License <LICENSE>`_.
 
 
 ====================
