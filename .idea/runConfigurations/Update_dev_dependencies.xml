@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Update &amp; Sync Dependencies" type="PythonConfigurationType" factoryName="Python" folderName="Dependencies">
+  <configuration default="false" name="Update dev dependencies" type="PythonConfigurationType" factoryName="Python" folderName="Dependencies">
     <module name="ss2sg" />
     <option name="INTERPRETER_OPTIONS" value="" />
     <option name="PARENT_ENVS" value="true" />
@@ -23,14 +23,14 @@
       </ENTRIES>
     </EXTENSION>
     <option name="SCRIPT_NAME" value="piptools" />
-    <option name="PARAMETERS" value="sync requirements-dev.txt requirements.txt" />
+    <option name="PARAMETERS" value="compile -r -U requirements-dev.in" />
     <option name="SHOW_COMMAND_LINE" value="false" />
     <option name="EMULATE_TERMINAL" value="true" />
     <option name="MODULE_MODE" value="true" />
     <option name="REDIRECT_INPUT" value="false" />
     <option name="INPUT_FILE" value="" />
     <method v="2">
-      <option name="RunConfigurationTask" enabled="true" run_configuration_name="Update dev dependencies" run_configuration_type="PythonConfigurationType" />
+      <option name="RunConfigurationTask" enabled="true" run_configuration_name="Update prod dependencies" run_configuration_type="PythonConfigurationType" />
     </method>
   </configuration>
 </component>
