@@ -5,3 +5,4 @@ edgegrid-python
 
 pydantic
 requests
+structlog
