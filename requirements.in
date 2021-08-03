@@ -3,6 +3,6 @@ boto3
 # Akamai {OPEN} Edgegrid Authentication
 edgegrid-python
 
-pydantic
+pydantic[dotenv]
 requests
 structlog

@@ -16,7 +16,7 @@ click==8.0.1
     #   pip-tools
 decorator==5.0.9
     # via ipython
-ipython==7.25.0
+ipython==7.26.0
     # via -r requirements-dev.in
 ipython-genutils==0.2.0
     # via traitlets
@@ -46,7 +46,7 @@ pygments==2.9.0
     # via ipython
 regex==2021.7.6
     # via black
-tomli==1.0.4
+tomli==1.2.0
     # via
     #   black
     #   pep517

@@ -1,8 +1,7 @@
 from ipaddress import IPv4Network
 from typing import Optional, Set
 
-import boto3
-from pydantic import BaseModel, constr
+from pydantic import BaseModel, constr, Field
 from structlog import get_logger
 
 
@@ -20,29 +19,30 @@ class SecurityGroupRef(BaseModel):
     account: Optional[AWSAccount]
     name: Optional[str]
     group_id: constr(regex=r"sg-([0-9a-fA-F]{8}|[0-9a-f-A-F]{17})")
+    protocol: constr(to_lower=True)
+    from_port: int
+    to_port: Optional[int]
+    description: Optional[str] = Field("SiteShield")
+
+
+class SecurityGroupChangeResult(BaseModel):
+    authorized: Set[IPv4Network]
+    revoked: Set[IPv4Network]
 
 
 class SecurityGroup:
     def __init__(
         self,
         aws_sg,
-        protocol: str,
-        from_port: int,
-        to_port: Optional[int] = None,
-        description: Optional[str] = "SiteShield",
+        sg_ref,
     ):
         self._aws_sg = aws_sg
-        self._from_port = from_port
-        self._to_port = to_port or from_port
-        self._description = description
-        self._protocol = protocol.lower()
+        self._sg_ref = sg_ref
 
     @classmethod
-    def retrieve(
-        cls, ec2_client, sg_ref: SecurityGroupRef, protocol: str, from_port: int, to_port: Optional[int] = None
-    ):
+    def retrieve(cls, ec2_client, sg_ref: SecurityGroupRef):
         aws_sg = ec2_client.SecurityGroup(sg_ref.group_id)
-        return cls(aws_sg, protocol=protocol, from_port=from_port, to_port=to_port)
+        return cls(aws_sg, sg_ref)
 
     @property
     def authorized_ips(self) -> Set[IPv4Network]:
@@ -55,9 +55,9 @@ class SecurityGroup:
         # Once the tuple matches, we've found what we're looking for
         for permission in self._aws_sg.ip_permissions:
             if (
-                permission.get("FromPort") == self._from_port
-                and permission.get("ToPort") == self._to_port
-                and permission.get("IpProtocol") == self._protocol
+                permission.get("FromPort") == self._sg_ref.from_port
+                and permission.get("ToPort") == self._sg_ref.to_port
+                and permission.get("IpProtocol") == self._sg_ref.protocol
             ):
                 return set(IPv4Network(ip_range["CidrIp"]) for ip_range in permission["IpRanges"])
         return set()
@@ -65,48 +65,36 @@ class SecurityGroup:
     def _ip_permission_from_cidr_set(self, cidr_set: Set[IPv4Network], with_description: bool) -> dict:
         """Creates an AWS IpPermission object for our configuration, with or without a description for each CIDR"""
         if with_description:
-            base_dict = {"Description": self._description}
+            base_dict = {"Description": self._sg_ref.description}
         else:
             base_dict = {}
 
         return {
-            "FromPort": self._from_port,
-            "ToPort": self._to_port,
-            "IpProtocol": self._protocol,
+            "FromPort": self._sg_ref.from_port,
+            "ToPort": self._sg_ref.to_port,
+            "IpProtocol": self._sg_ref.protocol,
             "IpRanges": [base_dict | {"CidrIp": str(cidr)} for cidr in cidr_set],
         }
 
     def update_from_cidr_set(self, new_set: Set[IPv4Network]):
+        result = SecurityGroupChangeResult(authorized=set(), revoked=set())
+
         current_set = self.authorized_ips
-        if current_set == new_set:
-            logger.info("IPs didn't change")
-            return
 
         if to_authorize := new_set - current_set:
-            logger.info("Authorizing new IPs", ips=to_authorize)
+            result.authorized = to_authorize
             self._aws_sg.authorize_ingress(
                 IpPermissions=[self._ip_permission_from_cidr_set(to_authorize, with_description=True)]
             )
         else:
-            logger.info("No new IPs to authorize")
+            logger.debug("No new IPs to authorize")
 
         if to_revoke := current_set - new_set:
-            logger.info("Revoking old IPs", ips=to_revoke)
+            result.revoked = to_revoke
             self._aws_sg.revoke_ingress(
                 IpPermissions=[self._ip_permission_from_cidr_set(to_revoke, with_description=False)]
             )
         else:
-            logger.info("No old IPs to revoke")
+            logger.debug("No old IPs to revoke")
 
-
-def work():
-    ec2 = boto3.resource("ec2")
-    sg_ref = SecurityGroupRef(group_id="sg-1234567890abcdef1")
-    sg = SecurityGroup.retrieve(ec2_client=ec2, from_port=1234, to_port=1234, protocol="tcp", sg_ref=sg_ref)
-
-    new_ips = {
-        IPv4Network("10.0.0.1/32"),
-        IPv4Network("10.0.0.0/24"),
-        IPv4Network("10.0.0.4/32"),
-    }
-    sg.update_from_cidr_set(new_ips)
+        return result

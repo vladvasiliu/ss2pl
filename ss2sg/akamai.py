@@ -16,6 +16,7 @@ class AkamaiSettings(BaseSettings):
 
     class Config:
         env_prefix = "akamai_"
+        case_sensitive = False
 
 
 def snake_to_lower_camel_case(string: str) -> str:
@@ -58,10 +59,20 @@ class AkamaiClient:
         response.raise_for_status()
         return response.json()
 
+    def _post(self, endpoint: AnyStr) -> dict:
+        url = urljoin(self._base_url, endpoint)
+        response = self._session.post(url)
+        response.raise_for_status()
+        return response.json()
+
     def list_maps(self) -> List[SiteShieldMap]:
         return [SiteShieldMap(**map_dict) for map_dict in self._get("/siteshield/v1/maps")["siteShieldMaps"]]
 
     def get_map(self, map_id: int) -> SiteShieldMap:
         # Documentation is wrong, the SiteShield Map is the base object, not the value of a "siteShieldMap" key.
         response = self._get(f"/siteshield/v1/maps/{map_id}")
+        return SiteShieldMap(**response)
+
+    def acknowledge_map(self, map_id: int) -> SiteShieldMap:
+        response = self._post(f"/siteshield/v1/maps/{map_id}/acknowledge")
         return SiteShieldMap(**response)
