@@ -4,9 +4,9 @@
 #
 #    pip-compile
 #
-boto3==1.18.12
+boto3==1.18.14
     # via -r requirements.in
-botocore==1.21.12
+botocore==1.21.14
     # via
     #   boto3
     #   s3transfer
