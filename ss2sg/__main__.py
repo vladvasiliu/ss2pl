@@ -37,15 +37,7 @@ def update_sg_from_ss_map(ss: SiteShieldMap, sg_ref: SecurityGroupRef):
     sg.update_from_cidr_set(ss.proposed_cidrs)
 
 
-if __name__ == "__main__":
-    bind_contextvars(execution_id=str(uuid4()))
-
-    settings = Settings(
-        ss_map_to_sg_mapping={
-            1234567: [SecurityGroupRef(group_id="sg-1234567890abcdef1", from_port=1234, to_port=1234, protocol="tcp")]
-        },
-    )
-
+def work(settings: Settings):
     c = AkamaiClient(settings.akamai_settings)
 
     maps_to_consider = c.list_maps()
@@ -57,28 +49,41 @@ if __name__ == "__main__":
 
     if not maps_to_consider:
         logger.info("No unacknowledged maps")
-    else:
-        for ss_map in maps_to_consider:
-            bind_contextvars(map_id=ss_map.id, proposed_ips=ss_map.proposed_cidrs)
-            failed = False
-            for sg_ref in settings.ss_map_to_sg_mapping[ss_map.id]:
-                bind_contextvars(sg_id=sg_ref.group_id)
-                try:
-                    update_sg_from_ss_map(ss_map, sg_ref)
-                except Exception as e:
-                    logger.warning("Update security group", success=False, exc_info=e)
-                    failed = True
-                else:
-                    logger.info("Update security group", success=True)
-                finally:
-                    unbind_contextvars("sg_id")
-            if failed:
-                logger.warning("Failed to update security groups, won't acknowledge new SiteShield map")
+        return
+
+    for ss_map in maps_to_consider:
+        bind_contextvars(map_id=ss_map.id, proposed_ips=ss_map.proposed_cidrs)
+        failed = False
+        for sg_ref in settings.ss_map_to_sg_mapping[ss_map.id]:
+            bind_contextvars(sg_id=sg_ref.group_id)
+            try:
+                update_sg_from_ss_map(ss_map, sg_ref)
+            except Exception as e:
+                logger.warning("Update security group", success=False, exc_info=e)
+                failed = True
             else:
-                try:
-                    c.acknowledge_map(ss_map.id)
-                except Exception as e:
-                    logger.warning("Acknowledge SiteShield Map", success=False, exc_info=e)
-                else:
-                    logger.info("Acknowledge SiteShield Map", success=True)
-            unbind_contextvars("map_id", "proposed_ips")
+                logger.info("Update security group", success=True)
+            finally:
+                unbind_contextvars("sg_id")
+        if failed:
+            logger.warning("Failed to update security groups, won't acknowledge new SiteShield map")
+        else:
+            try:
+                c.acknowledge_map(ss_map.id)
+            except Exception as e:
+                logger.warning("Acknowledge SiteShield Map", success=False, exc_info=e)
+            else:
+                logger.info("Acknowledge SiteShield Map", success=True)
+        unbind_contextvars("map_id", "proposed_ips")
+
+
+if __name__ == "__main__":
+    bind_contextvars(execution_id=str(uuid4()))
+
+    s = Settings(
+        ss_map_to_sg_mapping={
+            1234567: [SecurityGroupRef(group_id="sg-1234567890abcdef1", from_port=1234, to_port=1234, protocol="tcp")]
+        },
+    )
+
+    work(s)
