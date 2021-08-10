@@ -29,24 +29,29 @@ The configuration is expected to be valid JSON (it's parsed by Python's `json.lo
 
 The following is the expected layout:
 
-* `akamai`: Akamai-related configuration object. The fields can be obtained from Akamai identity page
-   - `access_token`
-   - `client_token`
-   - `client_secret`
-   - `host`: must start with a scheme, usually `https://`
-* `ss_map_to_sg_mapping`: A mapping of SiteShield Map ids to lists of AWS Security Group Definitions
-   - `site_shield_map_id`:
-      + `name`: a SecurityGroup name, used for logging purposes
-      + `group_id`: the AWS SecurityGroup id, as defined on AWS
-      + `protocol`: the protocol of the rules to be handled
-      + `from_port`: the starting port of the rule
-      + `to_port` *optional*: the ending port of the range; if any, only one port (`from_port`) will be authorized
-      + `description` *optional*: description to add to the SecurityGroup rules, defaults to *SiteShield* if empty
-      + `region_name`: AWS region where the SecurityGroup lives
-      + `account` *optional*: object describing an AWS account if the SecurityGroup isn't in the base account
-         - `name`: AWS Account name, used for logging purposes
-         - `id`: The 12-digit ID of the account
-         - `role_name`: the name of the role to be assumed
+* ``akamai``: Akamai-related configuration object. The fields can be obtained from Akamai identity page
+
+   - ``access_token``
+   - ``client_token``
+   - ``client_secret``
+   - ``host``: must start with a scheme, usually ``https://``
+
+* ``ss_map_to_sg_mapping``: A mapping of SiteShield Map ids to lists of AWS Security Group Definitions
+
+   - ``site_shield_map_id``:
+
+      + ``name``: a SecurityGroup name, used for logging purposes
+      + ``group_id``: the AWS SecurityGroup id, as defined on AWS
+      + ``protocol``: the protocol of the rules to be handled
+      + ``from_port``: the starting port of the rule
+      + ``to_port`` *optional*: the ending port of the range; if any, only one port (``from_port``) will be authorized
+      + ``description`` *optional*: description to add to the SecurityGroup rules, defaults to *SiteShield* if empty
+      + ``region_name``: AWS region where the SecurityGroup lives
+      + ``account`` *optional*: object describing an AWS account if the SecurityGroup isn't in the base account
+
+         - ``name``: AWS Account name, used for logging purposes
+         - ``id``: The 12-digit ID of the account
+         - ``role_name``: the name of the role to be assumed
 
 Example JSON config::
 
