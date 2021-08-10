@@ -9,7 +9,7 @@ from pydantic import BaseModel, PositiveInt, Extra, BaseSettings, SecretStr, Htt
 
 
 class AkamaiSettings(BaseSettings):
-    base_url: HttpUrl
+    host: HttpUrl
     client_secret: SecretStr
     access_token: SecretStr
     client_token: SecretStr
@@ -45,7 +45,7 @@ class SiteShieldMap(AkamaiModel):
 
 class AkamaiClient:
     def __init__(self, settings: AkamaiSettings):
-        self._base_url = settings.base_url
+        self._base_url = settings.host
         self._session = requests.Session()
         self._session.auth = EdgeGridAuth(
             settings.client_token.get_secret_value(),

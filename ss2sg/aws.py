@@ -1,7 +1,7 @@
 from ipaddress import IPv4Network
 from typing import Optional, Set
 
-from pydantic import BaseModel, constr, Field
+from pydantic import BaseModel, constr, Field, validator
 from structlog import get_logger
 
 
@@ -23,6 +23,14 @@ class SecurityGroupRef(BaseModel):
     from_port: int
     to_port: Optional[int]
     description: Optional[str] = Field("SiteShield")
+
+    @validator("to_port", always=True)
+    def validate_to_port(cls, v, values):
+        if v:
+            return v
+        if from_port := values.get("from_port"):
+            return from_port
+        raise Exception("'from_port' should be defined")
 
 
 class SecurityGroupChangeResult(BaseModel):
