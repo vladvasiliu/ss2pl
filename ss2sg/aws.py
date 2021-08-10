@@ -1,18 +1,38 @@
 from ipaddress import IPv4Network
 from typing import Optional, Set
 
+import boto3
 from pydantic import BaseModel, constr, Field, validator
 from structlog import get_logger
 
 
 logger = get_logger(__name__)
 
+SESSION_DURATION = 900
+
 
 class AWSAccount(BaseModel):
     name: str
     id: constr(regex=r"[0-9]{12}")
     # https://docs.aws.amazon.com/IAM/latest/APIReference/API_CreateRole.html#IAM-CreateRole-request-RoleName
-    role_name: constr(regex=r"[\w+=,.@-]{1-64}")
+    role_name: str
+
+    def get_session(self, exec_id: str, aws_profile_name: Optional[str]):
+        client = boto3.session.Session(profile_name=aws_profile_name).client("sts")
+        response = client.assume_role(
+            RoleArn=f"arn:aws:iam::{self.id}:role/{self.role_name}",
+            RoleSessionName=f"ss2sg_{exec_id}",
+            DurationSeconds=SESSION_DURATION,
+        )
+
+        credentials = response["Credentials"]
+
+        return boto3.session.Session(
+            aws_access_key_id=credentials["AccessKeyId"],
+            aws_secret_access_key=credentials["SecretAccessKey"],
+            aws_session_token=credentials["SessionToken"],
+            # region_name=self.region_name,
+        )
 
 
 class SecurityGroupRef(BaseModel):
@@ -23,6 +43,7 @@ class SecurityGroupRef(BaseModel):
     from_port: int
     to_port: Optional[int]
     description: Optional[str] = Field("SiteShield")
+    region_name: str
 
     @validator("to_port", always=True)
     def validate_to_port(cls, v, values):

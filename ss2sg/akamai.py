@@ -6,6 +6,9 @@ from urllib.parse import urljoin
 
 from akamai.edgegrid import EdgeGridAuth
 from pydantic import BaseModel, PositiveInt, Extra, BaseSettings, SecretStr, HttpUrl
+from structlog import get_logger
+
+logger = get_logger(__name__)
 
 
 class AkamaiSettings(BaseSettings):
