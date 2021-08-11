@@ -172,6 +172,8 @@ As this is made mainly for my own use, there are some limitations. Namely:
   will then be modified multiple times.
 * The program expects to be the only entity interacting with the configured Security Groups. It will remove any rules
   that don't correspond to the Akamai SiteShield Maps!
+* There's no AWS API that allows authorizing and revoking Security Group rules in a same call, so the rule change is not
+  atomic. The program may therefore be able to authorize new IPs but fail to revoke old ones.
 
 ## License
 
