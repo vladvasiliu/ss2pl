@@ -1,10 +1,11 @@
 import json
 from pathlib import Path
+from sys import exit
 from typing import Optional, Union
 from uuid import uuid4
 
 import boto3
-from pydantic import BaseSettings, conlist, PositiveInt
+from pydantic import BaseSettings, conlist, PositiveInt, Field
 import structlog
 from structlog.contextvars import bind_contextvars, merge_contextvars, unbind_contextvars
 
@@ -38,7 +39,7 @@ class Settings(BaseSettings):
 class AWSSettings(BaseSettings):
     secret_name: str
     secret_region: str
-    profile_name: Optional[str]
+    profile_name: Optional[str] = Field(..., env="aws_profile")
 
     class Config:
         env_prefix = "aws_"
@@ -155,3 +156,4 @@ if __name__ == "__main__":
         app.work()
     except Exception as exc:
         logger.error(exc, exc_info=exc)
+        exit(1)
