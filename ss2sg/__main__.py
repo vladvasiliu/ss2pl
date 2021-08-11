@@ -39,7 +39,7 @@ class Settings(BaseSettings):
 class AWSSettings(BaseSettings):
     secret_name: str
     secret_region: str
-    profile_name: Optional[str] = Field(..., env="aws_profile")
+    profile_name: Optional[str] = Field(None, env="aws_profile")
 
     class Config:
         env_prefix = "aws_"
