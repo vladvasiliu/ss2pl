@@ -1,8 +1,8 @@
-# SS2SG • SiteShield to SecurityGroup
+# SS2PL • SiteShield to PrefixList
 [![Code style](https://img.shields.io/badge/code%20style-black-000000)](https://github.com/python/black) [![License](https://img.shields.io/github/license/vladvasiliu/ss2sg)](LICENSE)
 
 
-`ss2sg` is a small script that updates the rules of an AWS Security Group to match the IPs of an Akamai SiteShield Map.
+`ss2pl` is a small script that updates the rules of an AWS Prefix List to match the IPs of an Akamai SiteShield Map.
 
 
 ## Functional description
@@ -16,13 +16,10 @@ The program does the following actions:
   2. Have an entry in the program's configuration
 * For each of the processed maps, do the following:
   1. If the list of proposed CIDRs is empty, skip it and log a warning.
-  2. For each of the map's security groups:
-     1. Compute the new IPs to authorize
-     2. Compute the old IPs to revoke
-     3. Authorize the new IPs
-     4. Revoke the old IPs
-  3. Acknowledge the SiteShield Map change if no failure happened for any of its Security Groups. Otherwise, don't
-     acknowledge and log a warning.
+  2. Compute the new IPs to add
+  3. Compute the old IPs to remove
+  4. Update the prefix list
+  5. Acknowledge the SiteShield Map change if the Prefix List update was successful.
 
 
 ## Usage
@@ -48,13 +45,10 @@ The following is the expected layout:
    - `client_token`
    - `client_secret`
    - `host`: must start with a scheme, usually ``https://``
-* `ss_map_to_sg_mapping`: A mapping of SiteShield Map ids to lists of AWS Security Group Definitions
+* `ss_to_pl`: A mapping of SiteShield Map ids to lists of AWS Security Group Definitions
    - `site_shield_map_id`:
       + `name`: a SecurityGroup name, used for logging purposes
-      + `group_id`: the AWS SecurityGroup id, as defined on AWS
-      + `protocol`: the protocol of the rules to be handled
-      + `from_port`: the starting port of the rule
-      + `to_port` *optional*: the ending port of the range; if none, only one port (`from_port`) will be authorized
+      + `prefix_list_id`: the AWS Prefix List id, as defined on AWS
       + `description` *optional*: description to add to the SecurityGroup rules, defaults to *SiteShield* if empty
       + `region_name`: AWS region where the SecurityGroup lives
       + `account` *optional*: object describing an AWS account if the SecurityGroup isn't in the base account
@@ -72,13 +66,10 @@ Example JSON config:
     "access_token": "akab-some-access-token",
     "client_token": "akab-some-client-token"
   },
-  "ss_map_to_sg_mapping": {
-    "1234567": [
-      {
-        "name": "SecurityGroupName",
-        "group_id": "sg-1234567890abdefab",
-        "protocol": "tcp",
-        "from_port": 123,
+  "ss_to_pl": {
+    "1234567": {
+        "name": "Prefix List Name",
+        "prefix_list_id": "pl-1234567890abdefab",
         "region_name": "eu-west-3",
         "account": {
           "name": "some-account-name",
@@ -86,7 +77,6 @@ Example JSON config:
           "role_name": "role-name-to-assume"
         }
       }
-    ]
   }
 }
 ```
@@ -99,27 +89,19 @@ Below is an example of a minimal policy:
 
 ```json
 {
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Sid": "VisualEditor0",
-      "Effect": "Allow",
-      "Action": [
-        "ec2:RevokeSecurityGroupIngress",
-        "ec2:AuthorizeSecurityGroupIngress"
-      ],
-      "Resource": "arn:aws:ec2:eu-west-3:123456789012:security-group/sg-1234567890abcdef1"
-    },
-    {
-      "Sid": "VisualEditor1",
-      "Effect": "Allow",
-      "Action": [
-        "ec2:DescribeSecurityGroupRules",
-        "ec2:DescribeSecurityGroups"
-      ],
-      "Resource": "*"
-    }
-  ]
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "VisualEditor0",
+            "Effect": "Allow",
+            "Action": [
+                "ec2:DescribeManagedPrefixLists",
+                "ec2:GetManagedPrefixListEntries",
+                "ec2:ModifyManagedPrefixList"
+            ],
+            "Resource": "arn:aws:ec2:eu-west-3:123456789123:prefix-list/pl-0123456789abcdef0"
+        }
+    ]
 }
 ```
 
@@ -160,20 +142,14 @@ As this is made mainly for my own use, there are some limitations. Namely:
 
 * Only one set of Akamai credentials can be loaded at a time. If you need multiple Akamai credentials, you'll have to
     run multiple instances.
-* There is rudimentary support for multiple Security Groups per Akamai SiteShield Map.
-  In case updating any of them fails, the map change will not be acknowledged and changes that were made won't be rolled
-  back.
+* Only one Managed Prefix List per Site Shield Map is supported.
 * The program is expected to run on AWS using an Instance/Task role as the starting point for authentication to AWS.
   In case the program runs somewhere else, there is basic support for the AWS_PROFILE environment variable.
   If this variable is used, it expects to find the credentials in the usual places.
   Refer to the [AWS Docs](https://boto3.amazonaws.com/v1/documentation/api/latest/guide/credentials.html)
   for more information.
-* It doesn't attempt to be smart, so you may configure the same security group multiple times. The security group
-  will then be modified multiple times.
-* The program expects to be the only entity interacting with the configured Security Groups. It will remove any rules
-  that don't correspond to the Akamai SiteShield Maps!
-* There's no AWS API that allows authorizing and revoking Security Group rules in a same call, so the rule change is not
-  atomic. The program may therefore be able to authorize new IPs but fail to revoke old ones.
+* It doesn't attempt to be smart, so you may configure the same Prefix List multiple times.
+  It will then be modified multiple times.
 
 ## License
 

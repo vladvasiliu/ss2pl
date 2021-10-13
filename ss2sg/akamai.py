@@ -77,5 +77,10 @@ class AkamaiClient:
         return SiteShieldMap(**response)
 
     def acknowledge_map(self, map_id: int) -> SiteShieldMap:
-        response = self._post(f"/siteshield/v1/maps/{map_id}/acknowledge")
+        try:
+            response = self._post(f"/siteshield/v1/maps/{map_id}/acknowledge")
+        except Exception as e:
+            logger.warning("Acknowledge SiteShield Map", success=False, exc_info=e)
+            raise e
+        logger.info("Acknowledge SiteShield Map", success=True)
         return SiteShieldMap(**response)

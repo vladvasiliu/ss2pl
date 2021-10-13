@@ -1,16 +1,18 @@
+from datetime import datetime
 import json
+import os
 from pathlib import Path
 from sys import exit
 from typing import Optional, Union
 from uuid import uuid4
 
 import boto3
-from pydantic import BaseSettings, conlist, PositiveInt, Field
+from pydantic import BaseSettings, PositiveInt, Field
 import structlog
 from structlog.contextvars import bind_contextvars, merge_contextvars, unbind_contextvars
 
-from .akamai import AkamaiClient, AkamaiSettings, SiteShieldMap
-from .aws import SecurityGroupRef, SecurityGroup, SecurityGroupChangeResult
+from .akamai import AkamaiClient, AkamaiSettings
+from .aws import PrefixList
 
 structlog.configure(
     cache_logger_on_first_use=True,
@@ -33,7 +35,7 @@ logger = structlog.get_logger(__name__)
 
 class Settings(BaseSettings):
     akamai: AkamaiSettings
-    ss_map_to_sg_mapping: dict[PositiveInt, conlist(item_type=SecurityGroupRef, min_items=1)]
+    ss_to_pl: dict[PositiveInt, PrefixList]
 
 
 class AWSSettings(BaseSettings):
@@ -81,17 +83,10 @@ class App:
             settings = aws_settings.fetch_settings()
         except Exception as e:
             raise Exception("Failed to load settings") from e
-        else:
-            return cls(aws_settings, settings)
 
-    def update_sg_from_ss_map(self, ss: SiteShieldMap, sg_ref: SecurityGroupRef) -> SecurityGroupChangeResult:
-        if sg_ref.account:
-            session = sg_ref.account.get_session(exec_id=EXECUTION_ID, aws_profile_name=self._aws_settings.profile_name)
-        else:
-            session = boto3.session.Session(profile_name=self._aws_settings.profile_name)
-        ec2 = session.resource("ec2", region_name=sg_ref.region_name)
-        sg = SecurityGroup.retrieve(ec2_client=ec2, sg_ref=sg_ref)
-        return sg.update_from_cidr_set(ss.proposed_cidrs)
+        if aws_settings.profile_name:
+            os.environ["AWS_PROFILE"] = aws_settings.profile_name
+        return cls(aws_settings, settings)
 
     def work(self):
         c = AkamaiClient(self._settings.akamai)
@@ -104,7 +99,7 @@ class App:
             logger.info("Retrieved SiteShield maps", maps=[m.id for m in maps_to_consider])
 
         maps_to_consider = [
-            m for m in maps_to_consider if not m.acknowledged and m.id in self._settings.ss_map_to_sg_mapping.keys()
+            m for m in maps_to_consider if not m.acknowledged and m.id in self._settings.ss_to_pl.keys()
         ]
 
         if not maps_to_consider:
@@ -112,48 +107,35 @@ class App:
             return
 
         for ss_map in maps_to_consider:
+            pl_ref = self._settings.ss_to_pl[ss_map.id]
             context_dict = dict(
-                map_id=ss_map.id, map_alias=ss_map.map_alias, proposed_ips=[str(x) for x in ss_map.proposed_cidrs]
+                map_id=ss_map.id,
+                map_alias=ss_map.map_alias,
+                proposed_ips=[str(x) for x in ss_map.proposed_cidrs],
+                pl_id=pl_ref.prefix_list_id,
+                pl_name=pl_ref.name,
             )
             bind_contextvars(**context_dict)
             if not ss_map.proposed_cidrs:
                 logger.warning("Empty proposed CIDR list!")
             else:
-                failed = False
-                for sg_ref in self._settings.ss_map_to_sg_mapping[ss_map.id]:
-                    bind_contextvars(sg_id=sg_ref.group_id)
-                    try:
-                        result = self.update_sg_from_ss_map(ss_map, sg_ref)
-                    except Exception as e:
-                        logger.warning("Update security group", success=False, exc_info=e)
-                        failed = True
-                    else:
-                        logger.info(
-                            "Update security group",
-                            success=True,
-                            authorized_ips=[str(x) for x in result.authorized],
-                            revoked_ips=[str(x) for x in result.revoked],
-                        )
-                    finally:
-                        unbind_contextvars("sg_id")
-
-                if failed:
-                    logger.warning("Failed to update security groups, won't acknowledge new SiteShield map")
-                else:
-                    try:
-                        c.acknowledge_map(ss_map.id)
-                    except Exception as e:
-                        logger.warning("Acknowledge SiteShield Map", success=False, exc_info=e)
-                    else:
-                        logger.info("Acknowledge SiteShield Map", success=True)
+                pl_ref.set_cidrs(ss_map.proposed_cidrs)
+                c.acknowledge_map(ss_map.id)
             unbind_contextvars(*context_dict.keys())
 
 
 if __name__ == "__main__":
     bind_contextvars(execution_id=EXECUTION_ID)
+    start_time = datetime.now()
     try:
         app = App.configure_from_env(".env")
         app.work()
     except Exception as exc:
         logger.error(exc, exc_info=exc)
-        exit(1)
+        exit_code = 1
+    else:
+        exit_code = 0
+    end_time = datetime.now()
+    duration = (end_time - start_time).total_seconds()
+    logger.info("Shutting down", run_time=duration)
+    exit(exit_code)
