@@ -1,5 +1,5 @@
 # SS2PL • SiteShield to PrefixList
-[![Code style](https://img.shields.io/badge/code%20style-black-000000)](https://github.com/python/black) [![License](https://img.shields.io/github/license/vladvasiliu/ss2sg)](LICENSE)
+[![Code style](https://img.shields.io/badge/code%20style-black-000000)](https://github.com/python/black) [![License](https://img.shields.io/github/license/vladvasiliu/ss2pl)](LICENSE)
 
 
 `ss2pl` is a small script that updates the rules of an AWS Prefix List to match the IPs of an Akamai SiteShield Map.

@@ -1,6 +1,6 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Update dev dependencies" type="PythonConfigurationType" factoryName="Python" folderName="Dependencies">
-    <module name="ss2sg" />
+    <module name="ss2pl" />
     <option name="INTERPRETER_OPTIONS" value="" />
     <option name="PARENT_ENVS" value="true" />
     <envs>

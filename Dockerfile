@@ -1,6 +1,6 @@
-ARG PY_VERSION="3.9.6"
-ARG BASE_IMAGE="python:${PY_VERSION}-buster"
-ARG RUN_IMAGE="python:${PY_VERSION}-slim-buster"
+ARG PY_VERSION="3.9.7"
+ARG BASE_IMAGE="python:${PY_VERSION}-bullseye"
+ARG RUN_IMAGE="python:${PY_VERSION}-slim-bullseye"
 
 FROM $BASE_IMAGE as builder
 
@@ -15,7 +15,7 @@ RUN     ["/bin/bash", "-c", "\
          source /venv/bin/activate && \
          pip install -r /requirements.txt"]
 
-COPY    ss2sg /venv/ss2sg/
+COPY    ss2pl /venv/ss2pl/
 
 
 ARG BUILD_DATE
@@ -28,14 +28,14 @@ ARG     GIT_HASH
 
 LABEL org.opencontainers.image.created="$BUILD_DATE"
 LABEL org.opencontainers.image.revision="$GIT_HASH"
-LABEL org.opencontainers.image.title="SS2SG"
-LABEL org.opencontainers.image.description="SiteShield 2 SecurityGroup"
+LABEL org.opencontainers.image.title="SS2PL"
+LABEL org.opencontainers.image.description="SiteShield 2 PrefixList"
 LABEL org.opencontainers.image.vendor="Vlad Vasiliu"
-LABEL org.opencontainers.image.source="https://github.com/vladvasiliu/ss2sg"
+LABEL org.opencontainers.image.source="https://github.com/vladvasiliu/ss2pl"
 LABEL org.opencontainers.image.authors="Vlad Vasiliu"
-LABEL org.opencontainers.image.url="https://github.com/vladvasiliu/ss2sg"
+LABEL org.opencontainers.image.url="https://github.com/vladvasiliu/ss2pl"
 
 
 COPY    --from=builder /venv /venv
 WORKDIR /venv
-CMD ["/venv/bin/python","-m","ss2sg"]
+CMD ["/venv/bin/python","-m","ss2pl"]
