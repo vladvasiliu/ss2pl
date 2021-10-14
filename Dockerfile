@@ -1,6 +1,7 @@
 ARG PY_VERSION="3.9.7"
-ARG BASE_IMAGE="python:${PY_VERSION}-bullseye"
-ARG RUN_IMAGE="python:${PY_VERSION}-slim-bullseye"
+ARG DEB_VERSION="bullseye"
+ARG BASE_IMAGE="python:${PY_VERSION}-${DEB_VERSION}"
+ARG RUN_IMAGE="python:${PY_VERSION}-slim-${DEB_VERSION}"
 
 FROM $BASE_IMAGE as builder
 
@@ -34,6 +35,7 @@ LABEL org.opencontainers.image.vendor="Vlad Vasiliu"
 LABEL org.opencontainers.image.source="https://github.com/vladvasiliu/ss2pl"
 LABEL org.opencontainers.image.authors="Vlad Vasiliu"
 LABEL org.opencontainers.image.url="https://github.com/vladvasiliu/ss2pl"
+LABEL org.opencontainers.image.licenses="BSD-3-Clause"
 
 
 COPY    --from=builder /venv /venv
