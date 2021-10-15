@@ -131,7 +131,7 @@ if __name__ == "__main__":
         app = App.configure_from_env(".env")
         app.work()
     except Exception as exc:
-        logger.error(exc, exc_info=exc)
+        logger.error(str(exc), exc_info=exc)
         exit_code = 1
     else:
         exit_code = 0
