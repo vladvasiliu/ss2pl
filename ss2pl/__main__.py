@@ -114,14 +114,20 @@ class App:
                 proposed_ips=[str(x) for x in ss_map.proposed_cidrs],
                 pl_id=pl_ref.prefix_list_id,
                 pl_name=pl_ref.name,
+                action="Update PrefixList",
             )
             bind_contextvars(**context_dict)
-            if not ss_map.proposed_cidrs:
-                logger.warning("Empty proposed CIDR list!")
-            else:
-                pl_ref.set_cidrs(ss_map.proposed_cidrs)
-                c.acknowledge_map(ss_map.id)
-            unbind_contextvars(*context_dict.keys())
+            try:
+                if not ss_map.proposed_cidrs:
+                    logger.warning("Empty proposed CIDR list!")
+                else:
+                    pl_ref.set_cidrs(ss_map.proposed_cidrs)
+                    bind_contextvars(action="Acknowledge SiteShield")
+                    c.acknowledge_map(ss_map.id)
+            except Exception as e:
+                logger.exception(str(e), exc_info=e)
+            finally:
+                unbind_contextvars(*context_dict.keys())
 
 
 if __name__ == "__main__":
