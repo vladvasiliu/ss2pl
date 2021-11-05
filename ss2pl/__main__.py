@@ -1,92 +1,86 @@
 from datetime import datetime
-import json
 import os
+from io import StringIO
 from pathlib import Path
-from sys import exit
-from typing import Optional, Union
+import sys
+import traceback
+from typing import Union, Dict, Any
 from uuid import uuid4
 
-import boto3
-from pydantic import BaseSettings, PositiveInt, Field
+import ecs_logging
 import structlog
 from structlog.contextvars import bind_contextvars, merge_contextvars, unbind_contextvars
 
-from .akamai import AkamaiClient, AkamaiSettings
-from .aws import PrefixList
+from .akamai import AkamaiClient
+from .settings import Settings, AppSettings
+
+
+def _format_error(event_dict):
+    if exc_info := event_dict.pop("exc_info", None):
+        # Shamelessly lifted from stdlib's logging module
+        sio = StringIO()
+
+        traceback.print_exception(exc_info.__class__, exc_info, exc_info.__traceback__, None, sio)
+        s = sio.getvalue()
+        sio.close()
+        if s[-1:] == "\n":
+            s = s[:-1]
+
+        event_dict["error"] = {
+            "stack_trace": s,
+            "message": str(exc_info),
+            "type": exc_info.__class__.__qualname__,
+        }
+    return event_dict
+
+
+class ECSFormatter(ecs_logging.StructlogFormatter):
+    def format_to_ecs(self, event_dict):  # type: (Dict[str, Any]) -> Dict[str, Any]
+        event_dict = super(ECSFormatter, self).format_to_ecs(event_dict)
+        event_dict = _format_error(event_dict)
+        return event_dict
+
 
 structlog.configure(
     cache_logger_on_first_use=True,
     processors=[
         merge_contextvars,
         structlog.threadlocal.merge_threadlocal_context,
-        structlog.processors.add_log_level,
-        structlog.processors.StackInfoRenderer(),
-        structlog.processors.format_exc_info,
-        structlog.processors.TimeStamper(fmt="iso", utc=True),
-        structlog.processors.JSONRenderer(),
+        # structlog.processors.add_log_level,
+        # structlog.processors.StackInfoRenderer(),
+        # structlog.processors.format_exc_info,
+        ECSFormatter(),
     ],
+    context_class=dict,
     logger_factory=structlog.PrintLoggerFactory(),
 )
 
+
 EXECUTION_ID = str(uuid4())
-
-logger = structlog.get_logger(__name__)
-
-
-class Settings(BaseSettings):
-    akamai: AkamaiSettings
-    ss_to_pl: dict[PositiveInt, PrefixList]
+bind_contextvars(execution_id=EXECUTION_ID)
+logger = structlog.get_logger("app")
 
 
-class AWSSettings(BaseSettings):
-    secret_name: str
-    secret_region: str
-    profile_name: Optional[str] = Field(None, env="aws_profile")
-
-    class Config:
-        env_prefix = "aws_"
-        case_sensitive = False
-
-    def fetch_settings(self) -> Settings:
-        """Gets a secret from AWS Secrets Manager. Expects JSON input.
-        It attempts to use the instance or task credentials.
-        :return: Settings based on the secret
-        """
-        session = boto3.session.Session(region_name=self.secret_region, profile_name=self.profile_name)
-        client = session.client(
-            service_name="secretsmanager",
-            region_name=self.secret_region,
-        )
-
-        try:
-            secret_value = client.get_secret_value(SecretId=self.secret_name)
-        except Exception as e:
-            raise Exception("Failed to retrieve secret value.") from e
-
-        if "SecretString" in secret_value:
-            secret = secret_value["SecretString"]
-        else:
-            raise Exception("The specified secret is malformed.")
-
-        return Settings(**json.loads(secret))
+class AppException(Exception):
+    pass
 
 
 class App:
-    def __init__(self, aws_settings: AWSSettings, settings: Settings):
+    def __init__(self, aws_settings: AppSettings, settings: Settings):
         self._aws_settings = aws_settings
         self._settings = settings
 
     @classmethod
     def configure_from_env(cls, env_file: Union[None, Path, str]):
         try:
-            aws_settings = AWSSettings(_env_file=env_file)
-            settings = aws_settings.fetch_settings()
+            app_settings = AppSettings(_env_file=env_file)
+            settings = app_settings.fetch_settings()
         except Exception as e:
-            raise Exception("Failed to load settings") from e
+            raise AppException("Failed to load settings") from e
 
-        if aws_settings.profile_name:
-            os.environ["AWS_PROFILE"] = aws_settings.profile_name
-        return cls(aws_settings, settings)
+        if app_settings.aws_profile:
+            os.environ["AWS_PROFILE"] = app_settings.aws_profile
+        return cls(app_settings, settings)
 
     def work(self):
         c = AkamaiClient(self._settings.akamai)
@@ -131,17 +125,17 @@ class App:
 
 
 if __name__ == "__main__":
-    bind_contextvars(execution_id=EXECUTION_ID)
     start_time = datetime.now()
+
     try:
         app = App.configure_from_env(".env")
         app.work()
     except Exception as exc:
-        logger.error(str(exc), exc_info=exc)
+        logger.exception(str(exc), exc_info=exc)
         exit_code = 1
     else:
         exit_code = 0
     end_time = datetime.now()
     duration = (end_time - start_time).total_seconds()
-    logger.info("Shutting down", run_time=duration)
-    exit(exit_code)
+    logger.info("Shutting down", run_time=duration, process=dict(exit_code=exit_code))
+    sys.exit(exit_code)
