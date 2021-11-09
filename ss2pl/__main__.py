@@ -58,11 +58,18 @@ structlog.configure(
 
 EXECUTION_ID = str(uuid4())
 bind_contextvars(execution_id=EXECUTION_ID)
-logger = structlog.get_logger("app")
 
 
 class AppException(Exception):
     pass
+
+
+def _get_root_cause(exc: Exception) -> str:
+    cause = exc
+    result = ""
+    while cause := cause.__cause__:
+        result = str(cause)
+    return result
 
 
 class App:
@@ -72,18 +79,27 @@ class App:
 
     @classmethod
     def configure_from_env(cls, env_file: Union[None, Path, str]):
+        logger = structlog.get_logger(**{"event.action": "load-config", "event.category": "configuration"})
         try:
             app_settings = AppSettings(_env_file=env_file)
             settings = app_settings.fetch_settings()
+            if app_settings.aws_profile:
+                os.environ["AWS_PROFILE"] = app_settings.aws_profile
         except Exception as e:
+            logger.exception(
+                "Failed to load settings",
+                exc_info=e,
+                **{"event.outcome": "failure", "event.reason": _get_root_cause(e)},
+            )
             raise AppException("Failed to load settings") from e
-
-        if app_settings.aws_profile:
-            os.environ["AWS_PROFILE"] = app_settings.aws_profile
+        else:
+            bind_contextvars()
+            logger.info("Loaded settings", **{"event.outcome": "success"})
         return cls(app_settings, settings)
 
     def work(self):
         c = AkamaiClient(self._settings.akamai)
+        logger = structlog.get_logger()
 
         maps_to_consider = c.list_maps()
         if not maps_to_consider:
@@ -131,11 +147,11 @@ if __name__ == "__main__":
         app = App.configure_from_env(".env")
         app.work()
     except Exception as exc:
-        logger.exception(str(exc), exc_info=exc)
+        # logger.exception(str(exc), exc_info=exc)
         exit_code = 1
     else:
         exit_code = 0
     end_time = datetime.now()
     duration = (end_time - start_time).total_seconds()
-    logger.info("Shutting down", run_time=duration, process=dict(exit_code=exit_code))
+    structlog.get_logger().info("Shutting down", run_time=duration, process=dict(exit_code=exit_code))
     sys.exit(exit_code)

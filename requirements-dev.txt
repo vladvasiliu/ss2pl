@@ -50,7 +50,7 @@ pygments==2.10.0
     #   rich
 regex==2021.11.2
     # via black
-rich==10.12.0
+rich==10.13.0
     # via -r requirements-dev.in
 tomli==1.2.2
     # via
