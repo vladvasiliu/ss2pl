@@ -143,11 +143,15 @@ class PrefixList(BaseModel):
                     RemoveEntries=[{"Cidr": str(cidr)} for cidr in to_remove],
                 )
             except Exception as e:
-                logger.warning("Update prefix list", success=False, exc_info=e)
+                logger.warning("Update prefix list", exc_info=e, **{"event.outcome": "failure"})
                 raise e
             result = PrefixListDescription(**response["PrefixList"])
             logger.info(
-                "Update prefix list", success=True, added=len(to_add), removed=len(to_remove), version=result.version
+                "Update prefix list",
+                added=len(to_add),
+                removed=len(to_remove),
+                version=result.version,
+                **{"event.outcome": "success"},
             )
         else:
             logger.info("Nothing to do")

@@ -79,7 +79,7 @@ class App:
 
     @classmethod
     def configure_from_env(cls, env_file: Union[None, Path, str]):
-        logger = structlog.get_logger(**{"event.action": "load-config", "event.category": "configuration"})
+        logger = structlog.get_logger(**{"event.action": "config-load", "event.category": "configuration"})
         try:
             app_settings = AppSettings(_env_file=env_file)
             settings = app_settings.fetch_settings()
@@ -106,7 +106,7 @@ class App:
             logger.warning("No SiteShield maps found")
             return
         else:
-            logger.info("Retrieved SiteShield maps", maps=[m.id for m in maps_to_consider])
+            logger.info("Retrieved SiteShield maps", **{"ss2pl.map.id": [m.id for m in maps_to_consider]})
 
         maps_to_consider = [
             m for m in maps_to_consider if not m.acknowledged and m.id in self._settings.ss_to_pl.keys()
@@ -118,21 +118,27 @@ class App:
 
         for ss_map in maps_to_consider:
             pl_ref = self._settings.ss_to_pl[ss_map.id]
-            context_dict = dict(
-                map_id=ss_map.id,
-                map_alias=ss_map.map_alias,
-                proposed_ips=[str(x) for x in ss_map.proposed_cidrs],
-                pl_id=pl_ref.prefix_list_id,
-                pl_name=pl_ref.name,
-                action="Update PrefixList",
-            )
+            context_dict = {
+                "ss2pl.map.id": ss_map.id,
+                "ss2pl.map.alias": ss_map.map_alias,
+                "ss2pl.map.proposed_ips": [str(x) for x in ss_map.proposed_cidrs],
+                "ss2pl.prefix_list.id": pl_ref.prefix_list_id,
+                "ss2pl.prefix_list.name": pl_ref.name,
+                "event.action": "prefixlist-update",
+            }
             bind_contextvars(**context_dict)
             try:
                 if not ss_map.proposed_cidrs:
                     logger.warning("Empty proposed CIDR list!")
                 else:
                     pl_ref.set_cidrs(ss_map.proposed_cidrs)
-                    bind_contextvars(action="Acknowledge SiteShield")
+                    bind_contextvars(
+                        **{
+                            "event.action": "siteshield-map-acknowledge",
+                            "event.category": "configuration",
+                            "event.type": "change",
+                        }
+                    )
                     c.acknowledge_map(ss_map.id)
             except Exception as e:
                 logger.exception(str(e), exc_info=e)
@@ -153,5 +159,13 @@ if __name__ == "__main__":
         exit_code = 0
     end_time = datetime.now()
     duration = (end_time - start_time).total_seconds()
-    structlog.get_logger().info("Shutting down", run_time=duration, process=dict(exit_code=exit_code))
+    structlog.get_logger().info(
+        "Shutting down",
+        **{
+            "process.exit_code": exit_code,
+            "process.uptime": duration,
+            "process.start": start_time,
+            "process.end": end_time,
+        },
+    )
     sys.exit(exit_code)
