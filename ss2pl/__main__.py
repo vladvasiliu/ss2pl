@@ -124,7 +124,7 @@ class App:
                 "ss2pl.map.proposed_ips": [str(x) for x in ss_map.proposed_cidrs],
                 "ss2pl.prefix_list.id": pl_ref.prefix_list_id,
                 "ss2pl.prefix_list.name": pl_ref.name,
-                "event.action": "prefixlist-update",
+                "event.action": "prefix-list-update",
             }
             bind_contextvars(**context_dict)
             try:
