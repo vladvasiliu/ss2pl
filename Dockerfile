@@ -1,34 +1,24 @@
-ARG PY_VERSION="3.9.7"
+ARG PY_VERSION="3.10.4"
 ARG DEB_VERSION="bullseye"
-ARG BASE_IMAGE="python:${PY_VERSION}-${DEB_VERSION}"
-ARG RUN_IMAGE="python:${PY_VERSION}-slim-${DEB_VERSION}"
 
-FROM $BASE_IMAGE as builder
+FROM python:${PY_VERSION}-${DEB_VERSION} as builder
 
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
 
+WORKDIR /
 COPY    requirements.txt /
-RUN     ["/bin/bash", "-c", "\
-         pip install virtualenv && \
-         virtualenv /venv && \
-         source /venv/bin/activate && \
-         pip install -r /requirements.txt"]
+SHELL   ["/bin/bash", "-c", "-o", "pipefail"]
+RUN     pip install --no-cache-dir virtualenv==20.14.1 &&\
+         virtualenv /venv &&\
+         /venv/bin/pip install --no-cache-dir -r /requirements.txt
 
 COPY    ss2pl /venv/ss2pl/
 
 
-ARG BUILD_DATE
-ARG GIT_HASH
+FROM    python:${PY_VERSION}-slim-${DEB_VERSION}
 
-FROM    $RUN_IMAGE
-
-ARG     BUILD_DATE
-ARG     GIT_HASH
-
-LABEL org.opencontainers.image.created="$BUILD_DATE"
-LABEL org.opencontainers.image.revision="$GIT_HASH"
 LABEL org.opencontainers.image.title="SS2PL"
 LABEL org.opencontainers.image.description="SiteShield 2 PrefixList"
 LABEL org.opencontainers.image.vendor="Vlad Vasiliu"
