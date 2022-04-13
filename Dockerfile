@@ -1,6 +1,5 @@
 ARG PY_VERSION="3.10.4"
 ARG DEB_VERSION="bullseye"
-ARG RUN_IMAGE=""
 
 FROM python:${PY_VERSION}-${DEB_VERSION} as builder
 
@@ -8,12 +7,12 @@ ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
 
-SHELL ["/bin/bash", "-c", "-o", "pipefail"]
+WORKDIR /
 COPY    requirements.txt /
-RUN     "pip install --no-cache-dir virtualenv && \
-         virtualenv /venv && \
-         source /venv/bin/activate && \
-         pip install --no-cache-dir -r /requirements.txt"
+SHELL   ["/bin/bash", "-c", "-o", "pipefail"]
+RUN     pip install --no-cache-dir virtualenv==20.14.1 &&\
+         virtualenv /venv &&\
+         /venv/bin/pip install --no-cache-dir -r /requirements.txt
 
 COPY    ss2pl /venv/ss2pl/
 
