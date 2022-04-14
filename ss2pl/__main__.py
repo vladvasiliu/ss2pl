@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 import os
 from io import StringIO
 from pathlib import Path
@@ -147,7 +147,7 @@ class App:
 
 
 if __name__ == "__main__":
-    start_time = datetime.now()
+    start_time = datetime.now(timezone.utc)
 
     try:
         app = App.configure_from_env(".env")
@@ -157,14 +157,14 @@ if __name__ == "__main__":
         exit_code = 1
     else:
         exit_code = 0
-    end_time = datetime.now()
+    end_time = datetime.now(timezone.utc)
     duration = (end_time - start_time).total_seconds()
     structlog.get_logger().info(
         "Shutting down",
         **{
             "process.exit_code": exit_code,
             "process.uptime": duration,
-            "process.start": start_time,
+            "process.start": start_time.isoformat(),
             "process.end": end_time,
         },
     )
