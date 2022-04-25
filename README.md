@@ -45,13 +45,13 @@ The following is the expected layout:
    - `client_token`
    - `client_secret`
    - `host`: must start with a scheme, usually ``https://``
-* `ss_to_pl`: A mapping of SiteShield Map ids to lists of AWS Security Group Definitions
+* `ss_to_pl`: A mapping of SiteShield Map ids to lists of AWS Prefix List Definitions
    - `site_shield_map_id`:
-      + `name`: a SecurityGroup name, used for logging purposes
+      + `name`: a PrefixList name, used for logging purposes
       + `prefix_list_id`: the AWS Prefix List id, as defined on AWS
-      + `description` *optional*: description to add to the SecurityGroup rules, defaults to *SiteShield* if empty
-      + `region_name`: AWS region where the SecurityGroup lives
-      + `account` *optional*: object describing an AWS account if the SecurityGroup isn't in the base account
+      + `description` *optional*: description to add to the PrefixList rules, defaults to *SiteShield* if empty
+      + `region_name`: AWS region where the PrefixList lives
+      + `account` *optional*: object describing an AWS account if the PrefixList isn't in the base account
          - `name`: AWS Account name, used for logging purposes
          - `id`: The 12-digit ID of the account
          - `role_name`: the name of the role to be assumed
@@ -84,7 +84,7 @@ Example JSON config:
 ### AWS Policies
 
 In order to function, the program needs to be able to call the relevant AWS APIs, namely those centered around EC2
-Security Groups. This authorisation has to be added to any role that will be used to interact with a Security Group.
+Prefix Lists. This authorisation has to be added to any role that will be used to interact with a Prefix List.
 Below is an example of a minimal policy:
 
 ```json
