@@ -80,7 +80,7 @@ class AkamaiClient:
         try:
             response = self._post(f"/siteshield/v1/maps/{map_id}/acknowledge")
         except Exception as e:
-            logger.warning("Acknowledge SiteShield Map", exc_info=e, **{"event.outcome": "failure"})
+            logger.warning("Failed to acknowledge SiteShield Map", exc_info=e, **{"event.outcome": "failure"})
             raise e
         logger.info("Acknowledged SiteShield Map", **{"event.outcome": "success"})
         return SiteShieldMap(**response)
