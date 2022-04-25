@@ -45,8 +45,8 @@ The following is the expected layout:
    - `client_token`
    - `client_secret`
    - `host`: must start with a scheme, usually ``https://``
-* `ss_to_pl`: A mapping of SiteShield Map ids to lists of AWS Prefix List Definitions
-   - `site_shield_map_id`:
+* `ss_to_pl`: A mapping of SiteShield Map ids to AWS Prefix List Definitions
+   - `<site_shield_map_id>`:
       + `name`: a PrefixList name, used for logging purposes
       + `prefix_list_id`: the AWS Prefix List id, as defined on AWS
       + `description` *optional*: description to add to the PrefixList rules, defaults to *SiteShield* if empty
