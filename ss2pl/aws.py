@@ -131,8 +131,20 @@ class PrefixList(BaseModel):
 
         new_total_count = len(old_entries) - len(to_remove) + len(to_add)
 
+        log = logger.bind(
+            **{"event.action": "prefix-list-update", "event.category": "configuration", "event.type": "change"}
+        )
+
         if new_total_count > desc.max_entries:
-            raise TooManyEntriesException(f"Too many entries to add ({new_total_count}) > ({desc.max_entries}).")
+            log.warning(
+                "Failed to update prefix list",
+                **{
+                    "event.action": "prefix-list-update",
+                    "event.outcome": "failure",
+                    "event.reason": "Too many entries to add ({new_total_count} > {desc.max_entries})",
+                },
+            )
+            raise TooManyEntriesException(f"Too many entries to add ({new_total_count} > {desc.max_entries})")
 
         if any((to_add, to_remove)):
             try:
@@ -143,15 +155,17 @@ class PrefixList(BaseModel):
                     RemoveEntries=[{"Cidr": str(cidr)} for cidr in to_remove],
                 )
             except Exception as e:
-                logger.warning("Failed to update prefix list", exc_info=e, **{"event.outcome": "failure"})
+                log.warning("Failed to update prefix list", exc_info=e, **{"event.outcome": "failure"})
                 raise e
             result = PrefixListDescription(**response["PrefixList"])
-            logger.info(
+            log.info(
                 "Updated prefix list",
-                added=len(to_add),
-                removed=len(to_remove),
-                version=result.version,
-                **{"event.outcome": "success"},
+                **{
+                    "event.outcome": "success",
+                    "ss2pl.prefix_list.added": len(to_add),
+                    "ss2pl.prefix_list.removed": len(to_remove),
+                    "ss2pl.prefix_list.version": result.version,
+                },
             )
         else:
-            logger.info("Nothing to do")
+            log.info("Nothing to do")

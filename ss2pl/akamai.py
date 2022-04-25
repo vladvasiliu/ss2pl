@@ -77,10 +77,17 @@ class AkamaiClient:
         return SiteShieldMap(**response)
 
     def acknowledge_map(self, map_id: int) -> SiteShieldMap:
+        log = logger.bind(
+            **{
+                "event.action": "siteshield-map-acknowledge",
+                "event.category": "configuration",
+                "event.type": "change",
+            }
+        )
         try:
             response = self._post(f"/siteshield/v1/maps/{map_id}/acknowledge")
         except Exception as e:
-            logger.warning("Failed to acknowledge SiteShield Map", exc_info=e, **{"event.outcome": "failure"})
+            log.warning("Failed to acknowledge SiteShield Map", exc_info=e, **{"event.outcome": "failure"})
             raise e
-        logger.info("Acknowledged SiteShield Map", **{"event.outcome": "success"})
+        log.info("Acknowledged SiteShield Map", **{"event.outcome": "success"})
         return SiteShieldMap(**response)

@@ -124,7 +124,6 @@ class App:
                 "ss2pl.map.proposed_ips": [str(x) for x in ss_map.proposed_cidrs],
                 "ss2pl.prefix_list.id": pl_ref.prefix_list_id,
                 "ss2pl.prefix_list.name": pl_ref.name,
-                "event.action": "prefix-list-update",
             }
             bind_contextvars(**context_dict)
             try:
@@ -132,13 +131,6 @@ class App:
                     logger.warning("Empty proposed CIDR list!")
                 else:
                     pl_ref.set_cidrs(ss_map.proposed_cidrs)
-                    bind_contextvars(
-                        **{
-                            "event.action": "siteshield-map-acknowledge",
-                            "event.category": "configuration",
-                            "event.type": "change",
-                        }
-                    )
                     c.acknowledge_map(ss_map.id)
             except Exception as e:
                 logger.exception(str(e), exc_info=e)
