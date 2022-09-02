@@ -1,4 +1,4 @@
-ARG PY_VERSION="3.10.4"
+ARG PY_VERSION="3.10.6"
 ARG DEB_VERSION="bullseye"
 
 FROM python:${PY_VERSION}-${DEB_VERSION} as builder
@@ -10,7 +10,7 @@ ENV PYTHONUNBUFFERED 1
 WORKDIR /
 COPY    requirements.txt /
 SHELL   ["/bin/bash", "-c", "-o", "pipefail"]
-RUN     pip install --no-cache-dir virtualenv==20.14.1 &&\
+RUN     pip install --no-cache-dir virtualenv==20.16.4 &&\
          virtualenv /venv &&\
          /venv/bin/pip install --no-cache-dir -r /requirements.txt
 
