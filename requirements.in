@@ -4,6 +4,7 @@ ecs-logging
 # Akamai {OPEN} Edgegrid Authentication
 edgegrid-python
 
-pydantic[dotenv]
+pydantic
+pydantic-settings
 requests
 structlog

@@ -1,5 +1,5 @@
-ARG PY_VERSION="3.11.3"
-ARG DEB_VERSION="bullseye"
+ARG PY_VERSION="3.13.2"
+ARG DEB_VERSION="bookworm"
 
 FROM python:${PY_VERSION}-${DEB_VERSION} as builder
 

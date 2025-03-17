@@ -41,6 +41,11 @@ class ECSFormatter(ecs_logging.StructlogFormatter):
         return event_dict
 
 
+if os.environ.get("DEBUG", False):
+    renderer = structlog.dev.ConsoleRenderer()
+else:
+    renderer = ECSFormatter()
+
 structlog.configure(
     cache_logger_on_first_use=True,
     processors=[
@@ -49,7 +54,8 @@ structlog.configure(
         # structlog.processors.add_log_level,
         # structlog.processors.StackInfoRenderer(),
         # structlog.processors.format_exc_info,
-        ECSFormatter(),
+        # ECSFormatter(),
+        renderer,
     ],
     context_class=dict,
     logger_factory=structlog.PrintLoggerFactory(),
@@ -145,7 +151,7 @@ if __name__ == "__main__":
         app = App.configure_from_env(".env")
         app.work()
     except Exception as exc:
-        # logger.exception(str(exc), exc_info=exc)
+        structlog.get_logger().exception(str(exc), exc_info=exc)
         exit_code = 1
     else:
         exit_code = 0
@@ -157,7 +163,7 @@ if __name__ == "__main__":
             "process.exit_code": exit_code,
             "process.uptime": duration,
             "process.start": start_time.isoformat(),
-            "process.end": end_time,
+            "process.end": end_time.isoformat(),
         },
     )
     sys.exit(exit_code)

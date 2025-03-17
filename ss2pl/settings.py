@@ -1,11 +1,12 @@
 import json
-from typing import Optional
+from typing import Optional, Dict
 
 import boto3
-from pydantic import BaseSettings, PositiveInt
+from pydantic import PositiveInt
 
 from ss2pl.akamai import AkamaiSettings
 from ss2pl.aws import PrefixList
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class AppSettingsException(Exception):
@@ -14,16 +15,14 @@ class AppSettingsException(Exception):
 
 class Settings(BaseSettings):
     akamai: AkamaiSettings
-    ss_to_pl: dict[PositiveInt, PrefixList]
+    ss_to_pl: Dict[PositiveInt, PrefixList]
 
 
 class AppSettings(BaseSettings):
     aws_secret_name: str
     aws_secret_region: str
     aws_profile: Optional[str]
-
-    class Config:
-        case_sensitive = False
+    model_config = SettingsConfigDict(case_sensitive=False)
 
     def fetch_settings(self) -> Settings:
         """Gets a secret from AWS Secrets Manager. Expects JSON input.

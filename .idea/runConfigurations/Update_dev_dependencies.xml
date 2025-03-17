@@ -1,14 +1,16 @@
 <component name="ProjectRunConfigurationManager">
   <configuration default="false" name="Update dev dependencies" type="PythonConfigurationType" factoryName="Python" folderName="Dependencies">
     <module name="ss2pl" />
+    <option name="ENV_FILES" value="" />
     <option name="INTERPRETER_OPTIONS" value="" />
     <option name="PARENT_ENVS" value="true" />
     <envs>
       <env name="PYTHONUNBUFFERED" value="1" />
     </envs>
     <option name="SDK_HOME" value="" />
+    <option name="SDK_NAME" value="Python 3.13 (ss2pl)" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
-    <option name="IS_MODULE_SDK" value="false" />
+    <option name="IS_MODULE_SDK" value="true" />
     <option name="ADD_CONTENT_ROOTS" value="true" />
     <option name="ADD_SOURCE_ROOTS" value="true" />
     <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
@@ -19,7 +21,7 @@
       <option name="IS_IGNORE_MISSING_FILES" value="false" />
       <option name="IS_ENABLE_EXPERIMENTAL_INTEGRATIONS" value="false" />
       <ENTRIES>
-        <ENTRY IS_ENABLED="true" PARSER="runconfig" />
+        <ENTRY IS_ENABLED="true" PARSER="runconfig" IS_EXECUTABLE="false" />
       </ENTRIES>
     </EXTENSION>
     <option name="SCRIPT_NAME" value="piptools" />

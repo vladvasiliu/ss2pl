@@ -3,8 +3,9 @@ from ipaddress import IPv4Network
 from typing import Optional, Set
 
 import boto3
-from pydantic import BaseModel, constr, PositiveInt
+from pydantic import StringConstraints, ConfigDict, BaseModel, PositiveInt
 from structlog import get_logger
+from typing_extensions import Annotated
 
 
 logger = get_logger(__name__)
@@ -35,7 +36,7 @@ class AWSBaseAccount(BaseModel):
 
 class AWSAccount(AWSBaseAccount):
     name: str
-    id: constr(regex=r"[0-9]{12}")
+    id: Annotated[str, StringConstraints(pattern=r"[0-9]{12}")]
     # https://docs.aws.amazon.com/IAM/latest/APIReference/API_CreateRole.html#IAM-CreateRole-request-RoleName
     role_name: str
 
@@ -78,22 +79,20 @@ class PrefixListAddressFamily(str, Enum):
 
 
 class PrefixListDescription(BaseModel):
-    prefix_list_id: constr(regex=r"pl-([0-9a-fA-F]{8}|[0-9a-f-A-F]{17})")
+    prefix_list_id: Annotated[str, StringConstraints(pattern=r"pl-([0-9a-fA-F]{8}|[0-9a-f-A-F]{17})")]
     address_family: PrefixListAddressFamily
     state: PrefixListState
-    state_message: Optional[str]
+    state_message: Optional[str] = None
     prefix_list_name: str
     max_entries: PositiveInt
     version: PositiveInt
-
-    class Config:
-        alias_generator = _to_camel
+    model_config = ConfigDict(alias_generator=_to_camel)
 
 
 class PrefixList(BaseModel):
     account: AWSAccount = AWSBaseAccount()
-    name: Optional[str]
-    prefix_list_id: constr(regex=r"pl-([0-9a-fA-F]{8}|[0-9a-f-A-F]{17})")
+    name: Optional[str] = None
+    prefix_list_id: Annotated[str, StringConstraints(pattern=r"pl-([0-9a-fA-F]{8}|[0-9a-f-A-F]{17})")]
     description: Optional[str] = "SiteShield"
     region_name: str
     address_family: PrefixListAddressFamily = PrefixListAddressFamily.ipv4

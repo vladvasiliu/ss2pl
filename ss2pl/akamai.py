@@ -5,7 +5,8 @@ from typing import Set, AnyStr, List, Optional
 from urllib.parse import urljoin
 
 from akamai.edgegrid import EdgeGridAuth
-from pydantic import BaseModel, PositiveInt, Extra, BaseSettings, SecretStr, HttpUrl
+from pydantic import ConfigDict, BaseModel, PositiveInt, SecretStr, HttpUrl
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from structlog import get_logger
 
 logger = get_logger(__name__)
@@ -16,10 +17,7 @@ class AkamaiSettings(BaseSettings):
     client_secret: SecretStr
     access_token: SecretStr
     client_token: SecretStr
-
-    class Config:
-        env_prefix = "akamai_"
-        case_sensitive = False
+    model_config = SettingsConfigDict(env_prefix="akamai_", case_sensitive=False)
 
 
 def snake_to_lower_camel_case(string: str) -> str:
@@ -28,17 +26,15 @@ def snake_to_lower_camel_case(string: str) -> str:
 
 
 class AkamaiModel(BaseModel):
-    class Config:
-        extra = Extra.ignore
-        alias_generator = snake_to_lower_camel_case
+    model_config = ConfigDict(extra="ignore", alias_generator=snake_to_lower_camel_case)
 
 
 class SiteShieldMap(AkamaiModel):
     id: PositiveInt
     acknowledged: bool
-    acknowledge_required_by: Optional[datetime]
-    acknowledged_on: Optional[datetime]
-    acknowledged_by: Optional[str]
+    acknowledge_required_by: Optional[datetime] = None
+    acknowledged_on: Optional[datetime] = None
+    acknowledged_by: Optional[str] = None
     current_cidrs: Set[IPv4Network]
     proposed_cidrs: Set[IPv4Network]
     map_alias: str
@@ -57,13 +53,13 @@ class AkamaiClient:
         )
 
     def _get(self, endpoint: AnyStr) -> dict:
-        url = urljoin(self._base_url, endpoint)
+        url = urljoin(self._base_url.unicode_string(), endpoint)
         response = self._session.get(url)
         response.raise_for_status()
         return response.json()
 
     def _post(self, endpoint: AnyStr) -> dict:
-        url = urljoin(self._base_url, endpoint)
+        url = urljoin(self._base_url.unicode_string(), endpoint)
         response = self._session.post(url)
         response.raise_for_status()
         return response.json()
